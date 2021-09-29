@@ -1,0 +1,741 @@
+2021-05-10 20:05:50,642 - mmdet - INFO - Environment info:
+------------------------------------------------------------
+sys.platform: linux
+Python: 3.7.9 (default, Aug 31 2020, 12:42:55) [GCC 7.3.0]
+CUDA available: True
+GPU 0: GeForce RTX 2080 Ti
+CUDA_HOME: /usr/local/cuda-10.0
+NVCC: Cuda compilation tools, release 10.0, V10.0.130
+GCC: gcc (Ubuntu 7.5.0-3ubuntu1~18.04) 7.5.0
+PyTorch: 1.3.0+cu100
+PyTorch compiling details: PyTorch built with:
+  - GCC 7.3
+  - Intel(R) Math Kernel Library Version 2019.0.4 Product Build 20190411 for Intel(R) 64 architecture applications
+  - Intel(R) MKL-DNN v0.20.5 (Git Hash 0125f28c61c1f822fd48570b4c1066f96fcb9b2e)
+  - OpenMP 201511 (a.k.a. OpenMP 4.5)
+  - NNPACK is enabled
+  - CUDA Runtime 10.0
+  - NVCC architecture flags: -gencode;arch=compute_35,code=sm_35;-gencode;arch=compute_50,code=sm_50;-gencode;arch=compute_60,code=sm_60;-gencode;arch=compute_61,code=sm_61;-gencode;arch=compute_70,code=sm_70;-gencode;arch=compute_75,code=sm_75;-gencode;arch=compute_50,code=compute_50
+  - CuDNN 7.6.3
+  - Magma 2.5.1
+  - Build settings: BLAS=MKL, BUILD_NAMEDTENSOR=OFF, BUILD_TYPE=Release, CXX_FLAGS= -Wno-deprecated -fvisibility-inlines-hidden -fopenmp -DUSE_FBGEMM -DUSE_QNNPACK -DUSE_PYTORCH_QNNPACK -O2 -fPIC -Wno-narrowing -Wall -Wextra -Wno-missing-field-initializers -Wno-type-limits -Wno-array-bounds -Wno-unknown-pragmas -Wno-sign-compare -Wno-unused-parameter -Wno-unused-variable -Wno-unused-function -Wno-unused-result -Wno-strict-overflow -Wno-strict-aliasing -Wno-error=deprecated-declarations -Wno-stringop-overflow -Wno-error=pedantic -Wno-error=redundant-decls -Wno-error=old-style-cast -fdiagnostics-color=always -faligned-new -Wno-unused-but-set-variable -Wno-maybe-uninitialized -fno-math-errno -fno-trapping-math -Wno-stringop-overflow, DISABLE_NUMA=1, PERF_WITH_AVX=1, PERF_WITH_AVX2=1, PERF_WITH_AVX512=1, USE_CUDA=True, USE_EXCEPTION_PTR=1, USE_GFLAGS=OFF, USE_GLOG=OFF, USE_MKL=ON, USE_MKLDNN=ON, USE_MPI=OFF, USE_NCCL=ON, USE_NNPACK=ON, USE_OPENMP=ON, USE_STATIC_DISPATCH=OFF, 
+
+TorchVision: 0.4.1+cu100
+OpenCV: 4.5.1
+MMCV: 1.2.5
+MMCV Compiler: GCC 7.5
+MMCV CUDA Compiler: 10.0
+MMDetection: 2.8.0+
+------------------------------------------------------------
+
+2021-05-10 20:05:51,019 - mmdet - INFO - Distributed training: False
+2021-05-10 20:05:51,298 - mmdet - INFO - Config:
+model = dict(
+    type='FasterRCNN',
+    pretrained='torchvision://resnet50',
+    backbone=dict(
+        type='ResNet',
+        depth=50,
+        num_stages=4,
+        out_indices=(0, 1, 2, 3),
+        frozen_stages=1,
+        norm_cfg=dict(type='BN', requires_grad=True),
+        norm_eval=True,
+        style='pytorch'),
+    neck=dict(
+        type='FPN',
+        in_channels=[256, 512, 1024, 2048],
+        out_channels=256,
+        num_outs=5),
+    rpn_head=dict(
+        type='RPNHead',
+        in_channels=256,
+        feat_channels=256,
+        anchor_generator=dict(
+            type='AnchorGenerator',
+            scales=[8],
+            ratios=[0.5, 1.0, 2.0],
+            strides=[4, 8, 16, 32, 64]),
+        bbox_coder=dict(
+            type='DeltaXYWHBBoxCoder',
+            target_means=[0.0, 0.0, 0.0, 0.0],
+            target_stds=[1.0, 1.0, 1.0, 1.0]),
+        loss_cls=dict(
+            type='CrossEntropyLoss', use_sigmoid=True, loss_weight=1.0),
+        loss_bbox=dict(type='L1Loss', loss_weight=1.0)),
+    roi_head=dict(
+        type='StandardRoIHead',
+        bbox_roi_extractor=dict(
+            type='SingleRoIExtractor',
+            roi_layer=dict(type='RoIAlign', output_size=7, sampling_ratio=0),
+            out_channels=256,
+            featmap_strides=[4, 8, 16, 32]),
+        bbox_head=dict(
+            type='Shared2FCBBoxHead',
+            in_channels=256,
+            fc_out_channels=1024,
+            roi_feat_size=7,
+            num_classes=2,
+            bbox_coder=dict(
+                type='DeltaXYWHBBoxCoder',
+                target_means=[0.0, 0.0, 0.0, 0.0],
+                target_stds=[0.1, 0.1, 0.2, 0.2]),
+            reg_class_agnostic=False,
+            loss_cls=dict(
+                type='CrossEntropyLoss', use_sigmoid=False, loss_weight=1.0),
+            loss_bbox=dict(type='L1Loss', loss_weight=1.0))))
+train_cfg = dict(
+    rpn=dict(
+        assigner=dict(
+            type='MaxIoUAssigner',
+            pos_iou_thr=0.7,
+            neg_iou_thr=0.3,
+            min_pos_iou=0.3,
+            match_low_quality=True,
+            ignore_iof_thr=-1),
+        sampler=dict(
+            type='RandomSampler',
+            num=256,
+            pos_fraction=0.5,
+            neg_pos_ub=-1,
+            add_gt_as_proposals=False),
+        allowed_border=-1,
+        pos_weight=-1,
+        debug=False),
+    rpn_proposal=dict(
+        nms_across_levels=False,
+        nms_pre=2000,
+        nms_post=1000,
+        max_num=1000,
+        nms_thr=0.7,
+        min_bbox_size=0),
+    rcnn=dict(
+        assigner=dict(
+            type='MaxIoUAssigner',
+            pos_iou_thr=0.5,
+            neg_iou_thr=0.5,
+            min_pos_iou=0.5,
+            match_low_quality=False,
+            ignore_iof_thr=-1),
+        sampler=dict(
+            type='RandomSampler',
+            num=512,
+            pos_fraction=0.25,
+            neg_pos_ub=-1,
+            add_gt_as_proposals=True),
+        pos_weight=-1,
+        debug=False))
+test_cfg = dict(
+    rpn=dict(
+        nms_across_levels=False,
+        nms_pre=1000,
+        nms_post=1000,
+        max_num=1000,
+        nms_thr=0.7,
+        min_bbox_size=0),
+    rcnn=dict(
+        score_thr=0.05,
+        nms=dict(type='nms', iou_threshold=0.5),
+        max_per_img=100))
+dataset_type = 'CustomerDataset'
+data_root = 'data/VOCdevkit/VOC/'
+img_norm_cfg = dict(
+    mean=[123.675, 116.28, 103.53], std=[58.395, 57.12, 57.375], to_rgb=True)
+train_pipeline = [
+    dict(type='LoadImageFromFile'),
+    dict(type='LoadAnnotations', with_bbox=True),
+    dict(type='Resize', img_scale=(1333, 800), keep_ratio=True),
+    dict(type='RandomFlip', flip_ratio=0.5),
+    dict(
+        type='Normalize',
+        mean=[123.675, 116.28, 103.53],
+        std=[58.395, 57.12, 57.375],
+        to_rgb=True),
+    dict(type='Pad', size_divisor=32),
+    dict(type='DefaultFormatBundle'),
+    dict(type='Collect', keys=['img', 'gt_bboxes', 'gt_labels'])
+]
+test_pipeline = [
+    dict(type='LoadImageFromFile'),
+    dict(
+        type='MultiScaleFlipAug',
+        img_scale=(1333, 800),
+        flip=False,
+        transforms=[
+            dict(type='Resize', keep_ratio=True),
+            dict(type='RandomFlip'),
+            dict(
+                type='Normalize',
+                mean=[123.675, 116.28, 103.53],
+                std=[58.395, 57.12, 57.375],
+                to_rgb=True),
+            dict(type='Pad', size_divisor=32),
+            dict(type='ImageToTensor', keys=['img']),
+            dict(type='Collect', keys=['img'])
+        ])
+]
+data = dict(
+    samples_per_gpu=4,
+    workers_per_gpu=8,
+    train=dict(
+        type='RepeatDataset',
+        times=1,
+        dataset=dict(
+            type='CustomerDataset',
+            ann_file=['data/VOCdevkit/VOC/ImageSets/Main/train.txt'],
+            img_prefix=['data/VOCdevkit/VOC/'],
+            pipeline=[
+                dict(type='LoadImageFromFile'),
+                dict(type='LoadAnnotations', with_bbox=True),
+                dict(type='Resize', img_scale=(1333, 800), keep_ratio=True),
+                dict(type='RandomFlip', flip_ratio=0.5),
+                dict(
+                    type='Normalize',
+                    mean=[123.675, 116.28, 103.53],
+                    std=[58.395, 57.12, 57.375],
+                    to_rgb=True),
+                dict(type='Pad', size_divisor=32),
+                dict(type='DefaultFormatBundle'),
+                dict(type='Collect', keys=['img', 'gt_bboxes', 'gt_labels'])
+            ])),
+    val=dict(
+        type='CustomerDataset',
+        ann_file='data/VOCdevkit/VOC/ImageSets/Main/val.txt',
+        img_prefix='data/VOCdevkit/VOC/',
+        pipeline=[
+            dict(type='LoadImageFromFile'),
+            dict(
+                type='MultiScaleFlipAug',
+                img_scale=(1333, 800),
+                flip=False,
+                transforms=[
+                    dict(type='Resize', keep_ratio=True),
+                    dict(type='RandomFlip'),
+                    dict(
+                        type='Normalize',
+                        mean=[123.675, 116.28, 103.53],
+                        std=[58.395, 57.12, 57.375],
+                        to_rgb=True),
+                    dict(type='Pad', size_divisor=32),
+                    dict(type='ImageToTensor', keys=['img']),
+                    dict(type='Collect', keys=['img'])
+                ])
+        ]),
+    test=dict(
+        type='CustomerDataset',
+        ann_file='data/VOCdevkit/VOC/ImageSets/Main/test.txt',
+        img_prefix='data/VOCdevkit/VOC/',
+        pipeline=[
+            dict(type='LoadImageFromFile'),
+            dict(
+                type='MultiScaleFlipAug',
+                img_scale=(1333, 800),
+                flip=False,
+                transforms=[
+                    dict(type='Resize', keep_ratio=True),
+                    dict(type='RandomFlip'),
+                    dict(
+                        type='Normalize',
+                        mean=[123.675, 116.28, 103.53],
+                        std=[58.395, 57.12, 57.375],
+                        to_rgb=True),
+                    dict(type='Pad', size_divisor=32),
+                    dict(type='ImageToTensor', keys=['img']),
+                    dict(type='Collect', keys=['img'])
+                ])
+        ]))
+evaluation = dict(interval=1, metric='mAP')
+optimizer = dict(type='SGD', lr=0.001, momentum=0.9, weight_decay=0.0001)
+optimizer_config = dict(grad_clip=None)
+lr_config = dict(
+    policy='step',
+    warmup='linear',
+    warmup_iters=500,
+    warmup_ratio=0.001,
+    step=[16, 20])
+total_epochs = 24
+checkpoint_config = dict(interval=2)
+log_config = dict(interval=50, hooks=[dict(type='TextLoggerHook')])
+dist_params = dict(backend='nccl')
+log_level = 'INFO'
+load_from = None
+resume_from = None
+workflow = [('train', 1)]
+work_dir = '/media/qingyuan/D/data/ubuntu_data/crop_detection/FPN/'
+gpu_ids = range(0, 1)
+
+2021-05-10 20:05:51,680 - mmdet - INFO - load model from: torchvision://resnet50
+2021-05-10 20:05:52,820 - mmdet - WARNING - The model and loaded state dict do not match exactly
+
+unexpected key in source state_dict: fc.weight, fc.bias
+
+2021-05-10 20:05:56,449 - mmdet - INFO - Start running, host: qingyuan@qingyuan-All-Series, work_dir: /media/qingyuan/D/data/ubuntu_data/crop_detection/FPN
+2021-05-10 20:05:56,449 - mmdet - INFO - workflow: [('train', 1)], max: 24 epochs
+2021-05-10 20:06:23,280 - mmdet - INFO - Epoch [1][50/419]	lr: 9.890e-05, eta: 1:29:03, time: 0.534, data_time: 0.065, memory: 7068, loss_rpn_cls: 0.6888, loss_rpn_bbox: 0.0178, loss_cls: 0.3933, acc: 89.8652, loss_bbox: 0.0013, loss: 1.1011
+2021-05-10 20:06:48,113 - mmdet - INFO - Epoch [1][100/419]	lr: 1.988e-04, eta: 1:25:30, time: 0.497, data_time: 0.012, memory: 7068, loss_rpn_cls: 0.5694, loss_rpn_bbox: 0.0205, loss_cls: 0.3870, acc: 99.5967, loss_bbox: 0.0014, loss: 0.9783
+2021-05-10 20:07:12,981 - mmdet - INFO - Epoch [1][150/419]	lr: 2.987e-04, eta: 1:24:05, time: 0.497, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.1338, loss_rpn_bbox: 0.0194, loss_cls: 0.4494, acc: 99.2812, loss_bbox: 0.0155, loss: 0.6181
+2021-05-10 20:07:38,082 - mmdet - INFO - Epoch [1][200/419]	lr: 3.986e-04, eta: 1:23:22, time: 0.502, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0616, loss_rpn_bbox: 0.0161, loss_cls: 0.2619, acc: 98.3096, loss_bbox: 0.0533, loss: 0.3929
+2021-05-10 20:08:04,140 - mmdet - INFO - Epoch [1][250/419]	lr: 4.985e-04, eta: 1:23:23, time: 0.521, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0446, loss_rpn_bbox: 0.0145, loss_cls: 0.2125, acc: 97.8076, loss_bbox: 0.0726, loss: 0.3442
+2021-05-10 20:08:30,289 - mmdet - INFO - Epoch [1][300/419]	lr: 5.984e-04, eta: 1:23:18, time: 0.523, data_time: 0.013, memory: 7069, loss_rpn_cls: 0.0343, loss_rpn_bbox: 0.0144, loss_cls: 0.1828, acc: 97.7627, loss_bbox: 0.0757, loss: 0.3072
+2021-05-10 20:08:55,766 - mmdet - INFO - Epoch [1][350/419]	lr: 6.983e-04, eta: 1:22:49, time: 0.510, data_time: 0.013, memory: 7069, loss_rpn_cls: 0.0311, loss_rpn_bbox: 0.0142, loss_cls: 0.1498, acc: 97.7510, loss_bbox: 0.0756, loss: 0.2707
+2021-05-10 20:09:21,034 - mmdet - INFO - Epoch [1][400/419]	lr: 7.982e-04, eta: 1:22:15, time: 0.505, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0263, loss_rpn_bbox: 0.0155, loss_cls: 0.1224, acc: 97.5791, loss_bbox: 0.0838, loss: 0.2480
+2021-05-10 20:09:58,075 - mmdet - INFO - 
++---------+-----+------+--------+-------+
+| class   | gts | dets | recall | ap    |
++---------+-----+------+--------+-------+
+| cyclist | 386 | 4810 | 0.751  | 0.261 |
+| person  | 332 | 2742 | 0.877  | 0.374 |
++---------+-----+------+--------+-------+
+| mAP     |     |      |        | 0.318 |
++---------+-----+------+--------+-------+
+2021-05-10 20:09:58,078 - mmdet - INFO - Exp name: faster_rcnn_r50_fpn_crop.py
+2021-05-10 20:09:58,078 - mmdet - INFO - Epoch(val) [1][419]	mAP: 0.3178
+2021-05-10 20:10:27,403 - mmdet - INFO - Epoch [2][50/419]	lr: 9.361e-04, eta: 1:19:36, time: 0.584, data_time: 0.065, memory: 7069, loss_rpn_cls: 0.0172, loss_rpn_bbox: 0.0128, loss_cls: 0.1255, acc: 97.7109, loss_bbox: 0.0775, loss: 0.2330
+2021-05-10 20:10:53,039 - mmdet - INFO - Epoch [2][100/419]	lr: 1.000e-03, eta: 1:19:24, time: 0.513, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0157, loss_rpn_bbox: 0.0139, loss_cls: 0.1502, acc: 97.1357, loss_bbox: 0.1017, loss: 0.2814
+2021-05-10 20:11:18,554 - mmdet - INFO - Epoch [2][150/419]	lr: 1.000e-03, eta: 1:19:08, time: 0.510, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0147, loss_rpn_bbox: 0.0141, loss_cls: 0.1547, acc: 96.8789, loss_bbox: 0.1055, loss: 0.2891
+2021-05-10 20:11:43,572 - mmdet - INFO - Epoch [2][200/419]	lr: 1.000e-03, eta: 1:18:43, time: 0.501, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0143, loss_rpn_bbox: 0.0132, loss_cls: 0.1293, acc: 97.3955, loss_bbox: 0.0947, loss: 0.2515
+2021-05-10 20:12:09,419 - mmdet - INFO - Epoch [2][250/419]	lr: 1.000e-03, eta: 1:18:29, time: 0.517, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0125, loss_rpn_bbox: 0.0114, loss_cls: 0.1156, acc: 97.4102, loss_bbox: 0.0929, loss: 0.2324
+2021-05-10 20:12:35,895 - mmdet - INFO - Epoch [2][300/419]	lr: 1.000e-03, eta: 1:18:22, time: 0.529, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0102, loss_rpn_bbox: 0.0121, loss_cls: 0.1261, acc: 97.5244, loss_bbox: 0.0873, loss: 0.2357
+2021-05-10 20:13:03,542 - mmdet - INFO - Epoch [2][350/419]	lr: 1.000e-03, eta: 1:18:27, time: 0.553, data_time: 0.014, memory: 7069, loss_rpn_cls: 0.0106, loss_rpn_bbox: 0.0120, loss_cls: 0.1174, acc: 97.4287, loss_bbox: 0.0888, loss: 0.2288
+2021-05-10 20:13:30,024 - mmdet - INFO - Epoch [2][400/419]	lr: 1.000e-03, eta: 1:18:14, time: 0.530, data_time: 0.013, memory: 7069, loss_rpn_cls: 0.0103, loss_rpn_bbox: 0.0122, loss_cls: 0.1302, acc: 97.0762, loss_bbox: 0.1023, loss: 0.2550
+2021-05-10 20:13:39,676 - mmdet - INFO - Saving checkpoint at 2 epochs
+2021-05-10 20:14:09,098 - mmdet - INFO - 
++---------+-----+------+--------+-------+
+| class   | gts | dets | recall | ap    |
++---------+-----+------+--------+-------+
+| cyclist | 386 | 3962 | 0.930  | 0.622 |
+| person  | 332 | 4439 | 0.970  | 0.786 |
++---------+-----+------+--------+-------+
+| mAP     |     |      |        | 0.704 |
++---------+-----+------+--------+-------+
+2021-05-10 20:14:09,100 - mmdet - INFO - Exp name: faster_rcnn_r50_fpn_crop.py
+2021-05-10 20:14:09,100 - mmdet - INFO - Epoch(val) [2][419]	mAP: 0.7040
+2021-05-10 20:14:36,885 - mmdet - INFO - Epoch [3][50/419]	lr: 1.000e-03, eta: 1:16:23, time: 0.553, data_time: 0.065, memory: 7069, loss_rpn_cls: 0.0081, loss_rpn_bbox: 0.0107, loss_cls: 0.1180, acc: 97.6270, loss_bbox: 0.0892, loss: 0.2260
+2021-05-10 20:15:01,962 - mmdet - INFO - Epoch [3][100/419]	lr: 1.000e-03, eta: 1:15:59, time: 0.502, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0081, loss_rpn_bbox: 0.0124, loss_cls: 0.1229, acc: 97.5752, loss_bbox: 0.0921, loss: 0.2355
+2021-05-10 20:15:27,618 - mmdet - INFO - Epoch [3][150/419]	lr: 1.000e-03, eta: 1:15:40, time: 0.513, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0086, loss_rpn_bbox: 0.0115, loss_cls: 0.1243, acc: 97.2656, loss_bbox: 0.1030, loss: 0.2475
+2021-05-10 20:15:53,046 - mmdet - INFO - Epoch [3][200/419]	lr: 1.000e-03, eta: 1:15:18, time: 0.509, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0079, loss_rpn_bbox: 0.0115, loss_cls: 0.1280, acc: 97.2178, loss_bbox: 0.1044, loss: 0.2518
+2021-05-10 20:16:18,330 - mmdet - INFO - Epoch [3][250/419]	lr: 1.000e-03, eta: 1:14:55, time: 0.506, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0082, loss_rpn_bbox: 0.0099, loss_cls: 0.1131, acc: 97.4004, loss_bbox: 0.0984, loss: 0.2296
+2021-05-10 20:16:43,779 - mmdet - INFO - Epoch [3][300/419]	lr: 1.000e-03, eta: 1:14:33, time: 0.509, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0065, loss_rpn_bbox: 0.0110, loss_cls: 0.1210, acc: 97.1748, loss_bbox: 0.0998, loss: 0.2383
+2021-05-10 20:17:09,436 - mmdet - INFO - Epoch [3][350/419]	lr: 1.000e-03, eta: 1:14:12, time: 0.513, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0078, loss_rpn_bbox: 0.0092, loss_cls: 0.1107, acc: 97.4512, loss_bbox: 0.0949, loss: 0.2227
+2021-05-10 20:17:34,986 - mmdet - INFO - Epoch [3][400/419]	lr: 1.000e-03, eta: 1:13:50, time: 0.511, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0074, loss_rpn_bbox: 0.0106, loss_cls: 0.1176, acc: 97.3525, loss_bbox: 0.0941, loss: 0.2297
+2021-05-10 20:18:11,049 - mmdet - INFO - 
++---------+-----+------+--------+-------+
+| class   | gts | dets | recall | ap    |
++---------+-----+------+--------+-------+
+| cyclist | 386 | 4353 | 0.933  | 0.705 |
+| person  | 332 | 2356 | 0.973  | 0.846 |
++---------+-----+------+--------+-------+
+| mAP     |     |      |        | 0.775 |
++---------+-----+------+--------+-------+
+2021-05-10 20:18:11,051 - mmdet - INFO - Exp name: faster_rcnn_r50_fpn_crop.py
+2021-05-10 20:18:11,052 - mmdet - INFO - Epoch(val) [3][419]	mAP: 0.7754
+2021-05-10 20:18:39,422 - mmdet - INFO - Epoch [4][50/419]	lr: 1.000e-03, eta: 1:12:32, time: 0.565, data_time: 0.065, memory: 7069, loss_rpn_cls: 0.0059, loss_rpn_bbox: 0.0090, loss_cls: 0.1068, acc: 97.5117, loss_bbox: 0.0935, loss: 0.2151
+2021-05-10 20:19:04,872 - mmdet - INFO - Epoch [4][100/419]	lr: 1.000e-03, eta: 1:12:11, time: 0.509, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0058, loss_rpn_bbox: 0.0098, loss_cls: 0.1054, acc: 97.5410, loss_bbox: 0.0917, loss: 0.2128
+2021-05-10 20:19:30,266 - mmdet - INFO - Epoch [4][150/419]	lr: 1.000e-03, eta: 1:11:49, time: 0.507, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0055, loss_rpn_bbox: 0.0094, loss_cls: 0.1022, acc: 97.6133, loss_bbox: 0.0907, loss: 0.2079
+2021-05-10 20:19:55,030 - mmdet - INFO - Epoch [4][200/419]	lr: 1.000e-03, eta: 1:11:23, time: 0.495, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0057, loss_rpn_bbox: 0.0108, loss_cls: 0.1211, acc: 97.2568, loss_bbox: 0.1002, loss: 0.2378
+2021-05-10 20:20:20,312 - mmdet - INFO - Epoch [4][250/419]	lr: 1.000e-03, eta: 1:11:01, time: 0.506, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0070, loss_rpn_bbox: 0.0104, loss_cls: 0.1084, acc: 97.3770, loss_bbox: 0.0934, loss: 0.2192
+2021-05-10 20:20:45,965 - mmdet - INFO - Epoch [4][300/419]	lr: 1.000e-03, eta: 1:10:40, time: 0.513, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0057, loss_rpn_bbox: 0.0097, loss_cls: 0.1205, acc: 97.8535, loss_bbox: 0.0844, loss: 0.2203
+2021-05-10 20:21:11,151 - mmdet - INFO - Epoch [4][350/419]	lr: 1.000e-03, eta: 1:10:16, time: 0.504, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0056, loss_rpn_bbox: 0.0097, loss_cls: 0.1223, acc: 97.6494, loss_bbox: 0.0894, loss: 0.2270
+2021-05-10 20:21:36,464 - mmdet - INFO - Epoch [4][400/419]	lr: 1.000e-03, eta: 1:09:53, time: 0.506, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0059, loss_rpn_bbox: 0.0096, loss_cls: 0.1211, acc: 97.2744, loss_bbox: 0.1017, loss: 0.2383
+2021-05-10 20:21:46,079 - mmdet - INFO - Saving checkpoint at 4 epochs
+2021-05-10 20:22:15,116 - mmdet - INFO - 
++---------+-----+------+--------+-------+
+| class   | gts | dets | recall | ap    |
++---------+-----+------+--------+-------+
+| cyclist | 386 | 3386 | 0.953  | 0.790 |
+| person  | 332 | 2681 | 0.979  | 0.873 |
++---------+-----+------+--------+-------+
+| mAP     |     |      |        | 0.832 |
++---------+-----+------+--------+-------+
+2021-05-10 20:22:15,118 - mmdet - INFO - Exp name: faster_rcnn_r50_fpn_crop.py
+2021-05-10 20:22:15,119 - mmdet - INFO - Epoch(val) [4][419]	mAP: 0.8315
+2021-05-10 20:22:43,223 - mmdet - INFO - Epoch [5][50/419]	lr: 1.000e-03, eta: 1:08:47, time: 0.559, data_time: 0.065, memory: 7069, loss_rpn_cls: 0.0056, loss_rpn_bbox: 0.0101, loss_cls: 0.1128, acc: 97.3223, loss_bbox: 0.0956, loss: 0.2240
+2021-05-10 20:23:08,681 - mmdet - INFO - Epoch [5][100/419]	lr: 1.000e-03, eta: 1:08:26, time: 0.509, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0055, loss_rpn_bbox: 0.0095, loss_cls: 0.1230, acc: 97.4473, loss_bbox: 0.0960, loss: 0.2340
+2021-05-10 20:23:33,927 - mmdet - INFO - Epoch [5][150/419]	lr: 1.000e-03, eta: 1:08:03, time: 0.505, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0046, loss_rpn_bbox: 0.0083, loss_cls: 0.1074, acc: 97.7061, loss_bbox: 0.0930, loss: 0.2133
+2021-05-10 20:23:59,217 - mmdet - INFO - Epoch [5][200/419]	lr: 1.000e-03, eta: 1:07:40, time: 0.506, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0043, loss_rpn_bbox: 0.0083, loss_cls: 0.1071, acc: 97.6416, loss_bbox: 0.0906, loss: 0.2104
+2021-05-10 20:24:24,642 - mmdet - INFO - Epoch [5][250/419]	lr: 1.000e-03, eta: 1:07:18, time: 0.509, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0047, loss_rpn_bbox: 0.0089, loss_cls: 0.1047, acc: 97.4971, loss_bbox: 0.0941, loss: 0.2124
+2021-05-10 20:24:50,030 - mmdet - INFO - Epoch [5][300/419]	lr: 1.000e-03, eta: 1:06:55, time: 0.507, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0043, loss_rpn_bbox: 0.0088, loss_cls: 0.0891, acc: 97.8311, loss_bbox: 0.0876, loss: 0.1898
+2021-05-10 20:25:15,295 - mmdet - INFO - Epoch [5][350/419]	lr: 1.000e-03, eta: 1:06:32, time: 0.505, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0049, loss_rpn_bbox: 0.0087, loss_cls: 0.0931, acc: 97.8213, loss_bbox: 0.0872, loss: 0.1938
+2021-05-10 20:25:40,638 - mmdet - INFO - Epoch [5][400/419]	lr: 1.000e-03, eta: 1:06:09, time: 0.507, data_time: 0.013, memory: 7069, loss_rpn_cls: 0.0050, loss_rpn_bbox: 0.0085, loss_cls: 0.0947, acc: 97.3525, loss_bbox: 0.1005, loss: 0.2087
+2021-05-10 20:26:16,564 - mmdet - INFO - 
++---------+-----+------+--------+-------+
+| class   | gts | dets | recall | ap    |
++---------+-----+------+--------+-------+
+| cyclist | 386 | 2766 | 0.961  | 0.817 |
+| person  | 332 | 2048 | 0.976  | 0.884 |
++---------+-----+------+--------+-------+
+| mAP     |     |      |        | 0.851 |
++---------+-----+------+--------+-------+
+2021-05-10 20:26:16,566 - mmdet - INFO - Exp name: faster_rcnn_r50_fpn_crop.py
+2021-05-10 20:26:16,566 - mmdet - INFO - Epoch(val) [5][419]	mAP: 0.8508
+2021-05-10 20:26:44,501 - mmdet - INFO - Epoch [6][50/419]	lr: 1.000e-03, eta: 1:05:11, time: 0.556, data_time: 0.065, memory: 7069, loss_rpn_cls: 0.0057, loss_rpn_bbox: 0.0093, loss_cls: 0.0927, acc: 97.5186, loss_bbox: 0.0964, loss: 0.2040
+2021-05-10 20:27:09,805 - mmdet - INFO - Epoch [6][100/419]	lr: 1.000e-03, eta: 1:04:48, time: 0.506, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0042, loss_rpn_bbox: 0.0085, loss_cls: 0.0957, acc: 97.6953, loss_bbox: 0.0878, loss: 0.1963
+2021-05-10 20:27:35,057 - mmdet - INFO - Epoch [6][150/419]	lr: 1.000e-03, eta: 1:04:25, time: 0.505, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0047, loss_rpn_bbox: 0.0081, loss_cls: 0.0850, acc: 97.7363, loss_bbox: 0.0882, loss: 0.1859
+2021-05-10 20:28:00,275 - mmdet - INFO - Epoch [6][200/419]	lr: 1.000e-03, eta: 1:04:02, time: 0.504, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0036, loss_rpn_bbox: 0.0079, loss_cls: 0.0869, acc: 97.7842, loss_bbox: 0.0877, loss: 0.1862
+2021-05-10 20:28:25,200 - mmdet - INFO - Epoch [6][250/419]	lr: 1.000e-03, eta: 1:03:38, time: 0.499, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0047, loss_rpn_bbox: 0.0081, loss_cls: 0.0835, acc: 97.9102, loss_bbox: 0.0779, loss: 0.1742
+2021-05-10 20:28:50,428 - mmdet - INFO - Epoch [6][300/419]	lr: 1.000e-03, eta: 1:03:15, time: 0.504, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0045, loss_rpn_bbox: 0.0090, loss_cls: 0.0895, acc: 97.6182, loss_bbox: 0.0944, loss: 0.1974
+2021-05-10 20:29:15,740 - mmdet - INFO - Epoch [6][350/419]	lr: 1.000e-03, eta: 1:02:51, time: 0.506, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0039, loss_rpn_bbox: 0.0082, loss_cls: 0.0874, acc: 97.7656, loss_bbox: 0.0841, loss: 0.1836
+2021-05-10 20:29:41,125 - mmdet - INFO - Epoch [6][400/419]	lr: 1.000e-03, eta: 1:02:29, time: 0.508, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0050, loss_rpn_bbox: 0.0098, loss_cls: 0.0907, acc: 97.4463, loss_bbox: 0.0971, loss: 0.2026
+2021-05-10 20:29:50,824 - mmdet - INFO - Saving checkpoint at 6 epochs
+2021-05-10 20:30:19,845 - mmdet - INFO - 
++---------+-----+------+--------+-------+
+| class   | gts | dets | recall | ap    |
++---------+-----+------+--------+-------+
+| cyclist | 386 | 3314 | 0.974  | 0.840 |
+| person  | 332 | 2466 | 0.976  | 0.880 |
++---------+-----+------+--------+-------+
+| mAP     |     |      |        | 0.860 |
++---------+-----+------+--------+-------+
+2021-05-10 20:30:19,848 - mmdet - INFO - Exp name: faster_rcnn_r50_fpn_crop.py
+2021-05-10 20:30:19,848 - mmdet - INFO - Epoch(val) [6][419]	mAP: 0.8600
+2021-05-10 20:30:47,550 - mmdet - INFO - Epoch [7][50/419]	lr: 1.000e-03, eta: 1:01:35, time: 0.552, data_time: 0.065, memory: 7069, loss_rpn_cls: 0.0038, loss_rpn_bbox: 0.0081, loss_cls: 0.0827, acc: 97.5693, loss_bbox: 0.0920, loss: 0.1867
+2021-05-10 20:31:12,471 - mmdet - INFO - Epoch [7][100/419]	lr: 1.000e-03, eta: 1:01:11, time: 0.498, data_time: 0.011, memory: 7069, loss_rpn_cls: 0.0040, loss_rpn_bbox: 0.0076, loss_cls: 0.0818, acc: 97.7959, loss_bbox: 0.0892, loss: 0.1826
+2021-05-10 20:31:37,576 - mmdet - INFO - Epoch [7][150/419]	lr: 1.000e-03, eta: 1:00:48, time: 0.502, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0039, loss_rpn_bbox: 0.0078, loss_cls: 0.0799, acc: 97.8398, loss_bbox: 0.0803, loss: 0.1719
+2021-05-10 20:32:03,203 - mmdet - INFO - Epoch [7][200/419]	lr: 1.000e-03, eta: 1:00:25, time: 0.513, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0035, loss_rpn_bbox: 0.0082, loss_cls: 0.0851, acc: 97.7891, loss_bbox: 0.0846, loss: 0.1814
+2021-05-10 20:32:28,790 - mmdet - INFO - Epoch [7][250/419]	lr: 1.000e-03, eta: 1:00:03, time: 0.512, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0044, loss_rpn_bbox: 0.0086, loss_cls: 0.0876, acc: 97.5947, loss_bbox: 0.0947, loss: 0.1952
+2021-05-10 20:32:54,798 - mmdet - INFO - Epoch [7][300/419]	lr: 1.000e-03, eta: 0:59:42, time: 0.520, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0043, loss_rpn_bbox: 0.0084, loss_cls: 0.0868, acc: 97.5537, loss_bbox: 0.0916, loss: 0.1911
+2021-05-10 20:33:20,153 - mmdet - INFO - Epoch [7][350/419]	lr: 1.000e-03, eta: 0:59:19, time: 0.507, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0036, loss_rpn_bbox: 0.0085, loss_cls: 0.0991, acc: 97.5938, loss_bbox: 0.0860, loss: 0.1972
+2021-05-10 20:33:45,446 - mmdet - INFO - Epoch [7][400/419]	lr: 1.000e-03, eta: 0:58:55, time: 0.506, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0036, loss_rpn_bbox: 0.0083, loss_cls: 0.0860, acc: 97.7842, loss_bbox: 0.0812, loss: 0.1791
+2021-05-10 20:34:21,634 - mmdet - INFO - 
++---------+-----+------+--------+-------+
+| class   | gts | dets | recall | ap    |
++---------+-----+------+--------+-------+
+| cyclist | 386 | 2580 | 0.935  | 0.833 |
+| person  | 332 | 2370 | 0.967  | 0.885 |
++---------+-----+------+--------+-------+
+| mAP     |     |      |        | 0.859 |
++---------+-----+------+--------+-------+
+2021-05-10 20:34:21,637 - mmdet - INFO - Exp name: faster_rcnn_r50_fpn_crop.py
+2021-05-10 20:34:21,637 - mmdet - INFO - Epoch(val) [7][419]	mAP: 0.8591
+2021-05-10 20:34:49,642 - mmdet - INFO - Epoch [8][50/419]	lr: 1.000e-03, eta: 0:58:06, time: 0.557, data_time: 0.067, memory: 7069, loss_rpn_cls: 0.0036, loss_rpn_bbox: 0.0075, loss_cls: 0.0872, acc: 97.7979, loss_bbox: 0.0909, loss: 0.1892
+2021-05-10 20:35:15,075 - mmdet - INFO - Epoch [8][100/419]	lr: 1.000e-03, eta: 0:57:43, time: 0.508, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0039, loss_rpn_bbox: 0.0078, loss_cls: 0.0985, acc: 97.5977, loss_bbox: 0.0931, loss: 0.2033
+2021-05-10 20:35:40,005 - mmdet - INFO - Epoch [8][150/419]	lr: 1.000e-03, eta: 0:57:19, time: 0.499, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0031, loss_rpn_bbox: 0.0073, loss_cls: 0.0745, acc: 97.9863, loss_bbox: 0.0784, loss: 0.1633
+2021-05-10 20:36:05,270 - mmdet - INFO - Epoch [8][200/419]	lr: 1.000e-03, eta: 0:56:56, time: 0.505, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0031, loss_rpn_bbox: 0.0079, loss_cls: 0.0789, acc: 97.6465, loss_bbox: 0.0854, loss: 0.1753
+2021-05-10 20:36:30,276 - mmdet - INFO - Epoch [8][250/419]	lr: 1.000e-03, eta: 0:56:32, time: 0.500, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0034, loss_rpn_bbox: 0.0091, loss_cls: 0.0779, acc: 97.7080, loss_bbox: 0.0880, loss: 0.1784
+2021-05-10 20:36:56,854 - mmdet - INFO - Epoch [8][300/419]	lr: 1.000e-03, eta: 0:56:11, time: 0.531, data_time: 0.013, memory: 7069, loss_rpn_cls: 0.0038, loss_rpn_bbox: 0.0076, loss_cls: 0.0846, acc: 97.6387, loss_bbox: 0.0894, loss: 0.1855
+2021-05-10 20:37:21,967 - mmdet - INFO - Epoch [8][350/419]	lr: 1.000e-03, eta: 0:55:47, time: 0.503, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0034, loss_rpn_bbox: 0.0076, loss_cls: 0.0727, acc: 97.9141, loss_bbox: 0.0762, loss: 0.1599
+2021-05-10 20:37:47,932 - mmdet - INFO - Epoch [8][400/419]	lr: 1.000e-03, eta: 0:55:25, time: 0.519, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0033, loss_rpn_bbox: 0.0075, loss_cls: 0.0757, acc: 97.7373, loss_bbox: 0.0869, loss: 0.1733
+2021-05-10 20:37:58,031 - mmdet - INFO - Saving checkpoint at 8 epochs
+2021-05-10 20:38:27,385 - mmdet - INFO - 
++---------+-----+------+--------+-------+
+| class   | gts | dets | recall | ap    |
++---------+-----+------+--------+-------+
+| cyclist | 386 | 3123 | 0.984  | 0.868 |
+| person  | 332 | 2172 | 0.982  | 0.894 |
++---------+-----+------+--------+-------+
+| mAP     |     |      |        | 0.881 |
++---------+-----+------+--------+-------+
+2021-05-10 20:38:27,388 - mmdet - INFO - Exp name: faster_rcnn_r50_fpn_crop.py
+2021-05-10 20:38:27,389 - mmdet - INFO - Epoch(val) [8][419]	mAP: 0.8808
+2021-05-10 20:38:56,307 - mmdet - INFO - Epoch [9][50/419]	lr: 1.000e-03, eta: 0:54:41, time: 0.576, data_time: 0.065, memory: 7069, loss_rpn_cls: 0.0028, loss_rpn_bbox: 0.0075, loss_cls: 0.0681, acc: 98.0439, loss_bbox: 0.0840, loss: 0.1624
+2021-05-10 20:39:22,394 - mmdet - INFO - Epoch [9][100/419]	lr: 1.000e-03, eta: 0:54:19, time: 0.522, data_time: 0.013, memory: 7069, loss_rpn_cls: 0.0028, loss_rpn_bbox: 0.0079, loss_cls: 0.0713, acc: 98.0127, loss_bbox: 0.0793, loss: 0.1613
+2021-05-10 20:39:48,538 - mmdet - INFO - Epoch [9][150/419]	lr: 1.000e-03, eta: 0:53:57, time: 0.523, data_time: 0.013, memory: 7069, loss_rpn_cls: 0.0033, loss_rpn_bbox: 0.0081, loss_cls: 0.0781, acc: 97.4092, loss_bbox: 0.0923, loss: 0.1817
+2021-05-10 20:40:13,607 - mmdet - INFO - Epoch [9][200/419]	lr: 1.000e-03, eta: 0:53:33, time: 0.502, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0032, loss_rpn_bbox: 0.0067, loss_cls: 0.0665, acc: 97.7783, loss_bbox: 0.0757, loss: 0.1520
+2021-05-10 20:40:38,880 - mmdet - INFO - Epoch [9][250/419]	lr: 1.000e-03, eta: 0:53:09, time: 0.505, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0025, loss_rpn_bbox: 0.0069, loss_cls: 0.0645, acc: 98.0410, loss_bbox: 0.0802, loss: 0.1541
+2021-05-10 20:41:03,900 - mmdet - INFO - Epoch [9][300/419]	lr: 1.000e-03, eta: 0:52:45, time: 0.500, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0033, loss_rpn_bbox: 0.0076, loss_cls: 0.0662, acc: 97.7998, loss_bbox: 0.0876, loss: 0.1648
+2021-05-10 20:41:28,953 - mmdet - INFO - Epoch [9][350/419]	lr: 1.000e-03, eta: 0:52:21, time: 0.501, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0030, loss_rpn_bbox: 0.0076, loss_cls: 0.0646, acc: 97.7217, loss_bbox: 0.0890, loss: 0.1642
+2021-05-10 20:41:53,900 - mmdet - INFO - Epoch [9][400/419]	lr: 1.000e-03, eta: 0:51:56, time: 0.499, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0031, loss_rpn_bbox: 0.0072, loss_cls: 0.0667, acc: 97.7139, loss_bbox: 0.0884, loss: 0.1654
+2021-05-10 20:42:29,963 - mmdet - INFO - 
++---------+-----+------+--------+-------+
+| class   | gts | dets | recall | ap    |
++---------+-----+------+--------+-------+
+| cyclist | 386 | 3174 | 0.979  | 0.871 |
+| person  | 332 | 2215 | 0.970  | 0.877 |
++---------+-----+------+--------+-------+
+| mAP     |     |      |        | 0.874 |
++---------+-----+------+--------+-------+
+2021-05-10 20:42:29,965 - mmdet - INFO - Exp name: faster_rcnn_r50_fpn_crop.py
+2021-05-10 20:42:29,966 - mmdet - INFO - Epoch(val) [9][419]	mAP: 0.8739
+2021-05-10 20:42:58,231 - mmdet - INFO - Epoch [10][50/419]	lr: 1.000e-03, eta: 0:51:12, time: 0.563, data_time: 0.065, memory: 7069, loss_rpn_cls: 0.0030, loss_rpn_bbox: 0.0082, loss_cls: 0.0643, acc: 97.7578, loss_bbox: 0.0898, loss: 0.1652
+2021-05-10 20:43:23,447 - mmdet - INFO - Epoch [10][100/419]	lr: 1.000e-03, eta: 0:50:49, time: 0.504, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0029, loss_rpn_bbox: 0.0065, loss_cls: 0.0584, acc: 98.1406, loss_bbox: 0.0813, loss: 0.1491
+2021-05-10 20:43:48,760 - mmdet - INFO - Epoch [10][150/419]	lr: 1.000e-03, eta: 0:50:25, time: 0.506, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0031, loss_rpn_bbox: 0.0080, loss_cls: 0.0658, acc: 97.8477, loss_bbox: 0.0818, loss: 0.1587
+2021-05-10 20:44:13,952 - mmdet - INFO - Epoch [10][200/419]	lr: 1.000e-03, eta: 0:50:01, time: 0.504, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0028, loss_rpn_bbox: 0.0078, loss_cls: 0.0623, acc: 97.8867, loss_bbox: 0.0817, loss: 0.1545
+2021-05-10 20:44:39,373 - mmdet - INFO - Epoch [10][250/419]	lr: 1.000e-03, eta: 0:49:38, time: 0.508, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0035, loss_rpn_bbox: 0.0087, loss_cls: 0.0629, acc: 97.8379, loss_bbox: 0.0853, loss: 0.1604
+2021-05-10 20:45:04,721 - mmdet - INFO - Epoch [10][300/419]	lr: 1.000e-03, eta: 0:49:14, time: 0.507, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0035, loss_rpn_bbox: 0.0068, loss_cls: 0.0573, acc: 98.0049, loss_bbox: 0.0751, loss: 0.1426
+2021-05-10 20:45:29,712 - mmdet - INFO - Epoch [10][350/419]	lr: 1.000e-03, eta: 0:48:50, time: 0.499, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0026, loss_rpn_bbox: 0.0074, loss_cls: 0.0575, acc: 97.9834, loss_bbox: 0.0738, loss: 0.1412
+2021-05-10 20:45:54,607 - mmdet - INFO - Epoch [10][400/419]	lr: 1.000e-03, eta: 0:48:25, time: 0.498, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0024, loss_rpn_bbox: 0.0069, loss_cls: 0.0587, acc: 97.9395, loss_bbox: 0.0803, loss: 0.1483
+2021-05-10 20:46:04,054 - mmdet - INFO - Saving checkpoint at 10 epochs
+2021-05-10 20:46:33,160 - mmdet - INFO - 
++---------+-----+------+--------+-------+
+| class   | gts | dets | recall | ap    |
++---------+-----+------+--------+-------+
+| cyclist | 386 | 1330 | 0.966  | 0.882 |
+| person  | 332 | 1018 | 0.976  | 0.889 |
++---------+-----+------+--------+-------+
+| mAP     |     |      |        | 0.886 |
++---------+-----+------+--------+-------+
+2021-05-10 20:46:33,162 - mmdet - INFO - Exp name: faster_rcnn_r50_fpn_crop.py
+2021-05-10 20:46:33,162 - mmdet - INFO - Epoch(val) [10][419]	mAP: 0.8855
+2021-05-10 20:47:01,028 - mmdet - INFO - Epoch [11][50/419]	lr: 1.000e-03, eta: 0:47:43, time: 0.555, data_time: 0.066, memory: 7069, loss_rpn_cls: 0.0023, loss_rpn_bbox: 0.0061, loss_cls: 0.0566, acc: 98.0488, loss_bbox: 0.0732, loss: 0.1381
+2021-05-10 20:47:26,381 - mmdet - INFO - Epoch [11][100/419]	lr: 1.000e-03, eta: 0:47:19, time: 0.507, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0030, loss_rpn_bbox: 0.0071, loss_cls: 0.0576, acc: 98.0098, loss_bbox: 0.0853, loss: 0.1529
+2021-05-10 20:47:51,486 - mmdet - INFO - Epoch [11][150/419]	lr: 1.000e-03, eta: 0:46:55, time: 0.502, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0028, loss_rpn_bbox: 0.0080, loss_cls: 0.0610, acc: 97.8281, loss_bbox: 0.0862, loss: 0.1579
+2021-05-10 20:48:16,412 - mmdet - INFO - Epoch [11][200/419]	lr: 1.000e-03, eta: 0:46:31, time: 0.498, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0028, loss_rpn_bbox: 0.0065, loss_cls: 0.0548, acc: 98.1182, loss_bbox: 0.0775, loss: 0.1416
+2021-05-10 20:48:41,727 - mmdet - INFO - Epoch [11][250/419]	lr: 1.000e-03, eta: 0:46:07, time: 0.506, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0027, loss_rpn_bbox: 0.0068, loss_cls: 0.0609, acc: 97.8369, loss_bbox: 0.0802, loss: 0.1506
+2021-05-10 20:49:06,685 - mmdet - INFO - Epoch [11][300/419]	lr: 1.000e-03, eta: 0:45:43, time: 0.500, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0035, loss_rpn_bbox: 0.0077, loss_cls: 0.0587, acc: 97.8145, loss_bbox: 0.0836, loss: 0.1535
+2021-05-10 20:49:32,153 - mmdet - INFO - Epoch [11][350/419]	lr: 1.000e-03, eta: 0:45:19, time: 0.509, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0031, loss_rpn_bbox: 0.0065, loss_cls: 0.0541, acc: 98.0752, loss_bbox: 0.0720, loss: 0.1356
+2021-05-10 20:49:57,081 - mmdet - INFO - Epoch [11][400/419]	lr: 1.000e-03, eta: 0:44:55, time: 0.499, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0023, loss_rpn_bbox: 0.0078, loss_cls: 0.0591, acc: 97.8213, loss_bbox: 0.0878, loss: 0.1570
+2021-05-10 20:50:33,012 - mmdet - INFO - 
++---------+-----+------+--------+-------+
+| class   | gts | dets | recall | ap    |
++---------+-----+------+--------+-------+
+| cyclist | 386 | 782  | 0.909  | 0.849 |
+| person  | 332 | 843  | 0.970  | 0.892 |
++---------+-----+------+--------+-------+
+| mAP     |     |      |        | 0.870 |
++---------+-----+------+--------+-------+
+2021-05-10 20:50:33,015 - mmdet - INFO - Exp name: faster_rcnn_r50_fpn_crop.py
+2021-05-10 20:50:33,016 - mmdet - INFO - Epoch(val) [11][419]	mAP: 0.8703
+2021-05-10 20:51:01,063 - mmdet - INFO - Epoch [12][50/419]	lr: 1.000e-03, eta: 0:44:14, time: 0.559, data_time: 0.065, memory: 7069, loss_rpn_cls: 0.0021, loss_rpn_bbox: 0.0062, loss_cls: 0.0489, acc: 98.3164, loss_bbox: 0.0721, loss: 0.1293
+2021-05-10 20:51:25,993 - mmdet - INFO - Epoch [12][100/419]	lr: 1.000e-03, eta: 0:43:50, time: 0.499, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0018, loss_rpn_bbox: 0.0062, loss_cls: 0.0551, acc: 97.9033, loss_bbox: 0.0830, loss: 0.1461
+2021-05-10 20:51:51,294 - mmdet - INFO - Epoch [12][150/419]	lr: 1.000e-03, eta: 0:43:26, time: 0.506, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0029, loss_rpn_bbox: 0.0070, loss_cls: 0.0542, acc: 98.0459, loss_bbox: 0.0746, loss: 0.1387
+2021-05-10 20:52:16,359 - mmdet - INFO - Epoch [12][200/419]	lr: 1.000e-03, eta: 0:43:02, time: 0.501, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0025, loss_rpn_bbox: 0.0077, loss_cls: 0.0601, acc: 97.7852, loss_bbox: 0.0810, loss: 0.1513
+2021-05-10 20:52:41,469 - mmdet - INFO - Epoch [12][250/419]	lr: 1.000e-03, eta: 0:42:38, time: 0.502, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0020, loss_rpn_bbox: 0.0066, loss_cls: 0.0534, acc: 98.1152, loss_bbox: 0.0733, loss: 0.1353
+2021-05-10 20:53:06,687 - mmdet - INFO - Epoch [12][300/419]	lr: 1.000e-03, eta: 0:42:14, time: 0.505, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0023, loss_rpn_bbox: 0.0073, loss_cls: 0.0585, acc: 97.8574, loss_bbox: 0.0883, loss: 0.1564
+2021-05-10 20:53:31,934 - mmdet - INFO - Epoch [12][350/419]	lr: 1.000e-03, eta: 0:41:50, time: 0.505, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0023, loss_rpn_bbox: 0.0069, loss_cls: 0.0532, acc: 98.0078, loss_bbox: 0.0812, loss: 0.1436
+2021-05-10 20:53:57,277 - mmdet - INFO - Epoch [12][400/419]	lr: 1.000e-03, eta: 0:41:26, time: 0.507, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0023, loss_rpn_bbox: 0.0076, loss_cls: 0.0557, acc: 97.8848, loss_bbox: 0.0878, loss: 0.1535
+2021-05-10 20:54:06,776 - mmdet - INFO - Saving checkpoint at 12 epochs
+2021-05-10 20:54:35,750 - mmdet - INFO - 
++---------+-----+------+--------+-------+
+| class   | gts | dets | recall | ap    |
++---------+-----+------+--------+-------+
+| cyclist | 386 | 891  | 0.951  | 0.875 |
+| person  | 332 | 934  | 0.973  | 0.903 |
++---------+-----+------+--------+-------+
+| mAP     |     |      |        | 0.889 |
++---------+-----+------+--------+-------+
+2021-05-10 20:54:35,753 - mmdet - INFO - Exp name: faster_rcnn_r50_fpn_crop.py
+2021-05-10 20:54:35,753 - mmdet - INFO - Epoch(val) [12][419]	mAP: 0.8889
+2021-05-10 20:55:03,914 - mmdet - INFO - Epoch [13][50/419]	lr: 1.000e-03, eta: 0:40:46, time: 0.560, data_time: 0.065, memory: 7069, loss_rpn_cls: 0.0021, loss_rpn_bbox: 0.0061, loss_cls: 0.0503, acc: 98.1660, loss_bbox: 0.0807, loss: 0.1392
+2021-05-10 20:55:29,314 - mmdet - INFO - Epoch [13][100/419]	lr: 1.000e-03, eta: 0:40:22, time: 0.508, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0026, loss_rpn_bbox: 0.0074, loss_cls: 0.0523, acc: 98.0225, loss_bbox: 0.0774, loss: 0.1397
+2021-05-10 20:55:54,488 - mmdet - INFO - Epoch [13][150/419]	lr: 1.000e-03, eta: 0:39:58, time: 0.503, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0028, loss_rpn_bbox: 0.0072, loss_cls: 0.0577, acc: 97.8760, loss_bbox: 0.0815, loss: 0.1492
+2021-05-10 20:56:19,686 - mmdet - INFO - Epoch [13][200/419]	lr: 1.000e-03, eta: 0:39:34, time: 0.504, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0020, loss_rpn_bbox: 0.0062, loss_cls: 0.0532, acc: 98.0879, loss_bbox: 0.0734, loss: 0.1348
+2021-05-10 20:56:44,763 - mmdet - INFO - Epoch [13][250/419]	lr: 1.000e-03, eta: 0:39:10, time: 0.501, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0023, loss_rpn_bbox: 0.0072, loss_cls: 0.0588, acc: 97.8213, loss_bbox: 0.0805, loss: 0.1488
+2021-05-10 20:57:10,962 - mmdet - INFO - Epoch [13][300/419]	lr: 1.000e-03, eta: 0:38:47, time: 0.524, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0023, loss_rpn_bbox: 0.0061, loss_cls: 0.0490, acc: 98.2510, loss_bbox: 0.0691, loss: 0.1265
+2021-05-10 20:57:38,108 - mmdet - INFO - Epoch [13][350/419]	lr: 1.000e-03, eta: 0:38:24, time: 0.542, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0024, loss_rpn_bbox: 0.0064, loss_cls: 0.0545, acc: 97.9316, loss_bbox: 0.0801, loss: 0.1434
+2021-05-10 20:58:04,316 - mmdet - INFO - Epoch [13][400/419]	lr: 1.000e-03, eta: 0:38:01, time: 0.524, data_time: 0.013, memory: 7069, loss_rpn_cls: 0.0029, loss_rpn_bbox: 0.0071, loss_cls: 0.0547, acc: 97.9180, loss_bbox: 0.0810, loss: 0.1457
+2021-05-10 20:58:40,151 - mmdet - INFO - 
++---------+-----+------+--------+-------+
+| class   | gts | dets | recall | ap    |
++---------+-----+------+--------+-------+
+| cyclist | 386 | 839  | 0.935  | 0.880 |
+| person  | 332 | 909  | 0.973  | 0.895 |
++---------+-----+------+--------+-------+
+| mAP     |     |      |        | 0.888 |
++---------+-----+------+--------+-------+
+2021-05-10 20:58:40,154 - mmdet - INFO - Exp name: faster_rcnn_r50_fpn_crop.py
+2021-05-10 20:58:40,154 - mmdet - INFO - Epoch(val) [13][419]	mAP: 0.8875
+2021-05-10 20:59:08,262 - mmdet - INFO - Epoch [14][50/419]	lr: 1.000e-03, eta: 0:37:22, time: 0.559, data_time: 0.064, memory: 7069, loss_rpn_cls: 0.0019, loss_rpn_bbox: 0.0062, loss_cls: 0.0495, acc: 98.2080, loss_bbox: 0.0713, loss: 0.1289
+2021-05-10 20:59:33,494 - mmdet - INFO - Epoch [14][100/419]	lr: 1.000e-03, eta: 0:36:58, time: 0.505, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0018, loss_rpn_bbox: 0.0068, loss_cls: 0.0470, acc: 98.3223, loss_bbox: 0.0699, loss: 0.1254
+2021-05-10 20:59:58,467 - mmdet - INFO - Epoch [14][150/419]	lr: 1.000e-03, eta: 0:36:34, time: 0.500, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0016, loss_rpn_bbox: 0.0070, loss_cls: 0.0502, acc: 98.0918, loss_bbox: 0.0753, loss: 0.1342
+2021-05-10 21:00:23,665 - mmdet - INFO - Epoch [14][200/419]	lr: 1.000e-03, eta: 0:36:10, time: 0.504, data_time: 0.011, memory: 7069, loss_rpn_cls: 0.0019, loss_rpn_bbox: 0.0060, loss_cls: 0.0526, acc: 97.9990, loss_bbox: 0.0818, loss: 0.1422
+2021-05-10 21:00:48,787 - mmdet - INFO - Epoch [14][250/419]	lr: 1.000e-03, eta: 0:35:45, time: 0.502, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0021, loss_rpn_bbox: 0.0066, loss_cls: 0.0523, acc: 97.9873, loss_bbox: 0.0790, loss: 0.1399
+2021-05-10 21:01:13,725 - mmdet - INFO - Epoch [14][300/419]	lr: 1.000e-03, eta: 0:35:21, time: 0.499, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0022, loss_rpn_bbox: 0.0068, loss_cls: 0.0464, acc: 98.2324, loss_bbox: 0.0731, loss: 0.1285
+2021-05-10 21:01:38,665 - mmdet - INFO - Epoch [14][350/419]	lr: 1.000e-03, eta: 0:34:57, time: 0.499, data_time: 0.011, memory: 7069, loss_rpn_cls: 0.0024, loss_rpn_bbox: 0.0066, loss_cls: 0.0493, acc: 98.1201, loss_bbox: 0.0793, loss: 0.1376
+2021-05-10 21:02:03,912 - mmdet - INFO - Epoch [14][400/419]	lr: 1.000e-03, eta: 0:34:32, time: 0.505, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0025, loss_rpn_bbox: 0.0078, loss_cls: 0.0506, acc: 98.0488, loss_bbox: 0.0763, loss: 0.1372
+2021-05-10 21:02:13,494 - mmdet - INFO - Saving checkpoint at 14 epochs
+2021-05-10 21:02:42,222 - mmdet - INFO - 
++---------+-----+------+--------+-------+
+| class   | gts | dets | recall | ap    |
++---------+-----+------+--------+-------+
+| cyclist | 386 | 798  | 0.940  | 0.884 |
+| person  | 332 | 848  | 0.961  | 0.880 |
++---------+-----+------+--------+-------+
+| mAP     |     |      |        | 0.882 |
++---------+-----+------+--------+-------+
+2021-05-10 21:02:42,225 - mmdet - INFO - Exp name: faster_rcnn_r50_fpn_crop.py
+2021-05-10 21:02:42,225 - mmdet - INFO - Epoch(val) [14][419]	mAP: 0.8820
+2021-05-10 21:03:10,480 - mmdet - INFO - Epoch [15][50/419]	lr: 1.000e-03, eta: 0:33:54, time: 0.562, data_time: 0.065, memory: 7069, loss_rpn_cls: 0.0025, loss_rpn_bbox: 0.0067, loss_cls: 0.0510, acc: 98.0254, loss_bbox: 0.0827, loss: 0.1430
+2021-05-10 21:03:35,931 - mmdet - INFO - Epoch [15][100/419]	lr: 1.000e-03, eta: 0:33:30, time: 0.509, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0016, loss_rpn_bbox: 0.0069, loss_cls: 0.0494, acc: 98.0791, loss_bbox: 0.0790, loss: 0.1370
+2021-05-10 21:04:00,945 - mmdet - INFO - Epoch [15][150/419]	lr: 1.000e-03, eta: 0:33:06, time: 0.501, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0024, loss_rpn_bbox: 0.0062, loss_cls: 0.0466, acc: 98.1631, loss_bbox: 0.0700, loss: 0.1251
+2021-05-10 21:04:26,292 - mmdet - INFO - Epoch [15][200/419]	lr: 1.000e-03, eta: 0:32:42, time: 0.507, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0018, loss_rpn_bbox: 0.0065, loss_cls: 0.0496, acc: 98.0430, loss_bbox: 0.0756, loss: 0.1336
+2021-05-10 21:04:51,543 - mmdet - INFO - Epoch [15][250/419]	lr: 1.000e-03, eta: 0:32:18, time: 0.505, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0018, loss_rpn_bbox: 0.0071, loss_cls: 0.0496, acc: 98.0029, loss_bbox: 0.0764, loss: 0.1348
+2021-05-10 21:05:16,344 - mmdet - INFO - Epoch [15][300/419]	lr: 1.000e-03, eta: 0:31:53, time: 0.496, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0018, loss_rpn_bbox: 0.0057, loss_cls: 0.0426, acc: 98.3564, loss_bbox: 0.0680, loss: 0.1181
+2021-05-10 21:05:41,515 - mmdet - INFO - Epoch [15][350/419]	lr: 1.000e-03, eta: 0:31:29, time: 0.504, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0022, loss_rpn_bbox: 0.0069, loss_cls: 0.0479, acc: 98.1777, loss_bbox: 0.0759, loss: 0.1329
+2021-05-10 21:06:06,416 - mmdet - INFO - Epoch [15][400/419]	lr: 1.000e-03, eta: 0:31:05, time: 0.498, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0021, loss_rpn_bbox: 0.0066, loss_cls: 0.0450, acc: 98.2539, loss_bbox: 0.0698, loss: 0.1235
+2021-05-10 21:06:42,020 - mmdet - INFO - 
++---------+-----+------+--------+-------+
+| class   | gts | dets | recall | ap    |
++---------+-----+------+--------+-------+
+| cyclist | 386 | 829  | 0.956  | 0.901 |
+| person  | 332 | 785  | 0.970  | 0.899 |
++---------+-----+------+--------+-------+
+| mAP     |     |      |        | 0.900 |
++---------+-----+------+--------+-------+
+2021-05-10 21:06:42,023 - mmdet - INFO - Exp name: faster_rcnn_r50_fpn_crop.py
+2021-05-10 21:06:42,023 - mmdet - INFO - Epoch(val) [15][419]	mAP: 0.8996
+2021-05-10 21:07:09,821 - mmdet - INFO - Epoch [16][50/419]	lr: 1.000e-03, eta: 0:30:27, time: 0.553, data_time: 0.064, memory: 7069, loss_rpn_cls: 0.0018, loss_rpn_bbox: 0.0062, loss_cls: 0.0446, acc: 98.1748, loss_bbox: 0.0743, loss: 0.1270
+2021-05-10 21:07:35,100 - mmdet - INFO - Epoch [16][100/419]	lr: 1.000e-03, eta: 0:30:03, time: 0.506, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0018, loss_rpn_bbox: 0.0059, loss_cls: 0.0447, acc: 98.2559, loss_bbox: 0.0728, loss: 0.1251
+2021-05-10 21:07:59,986 - mmdet - INFO - Epoch [16][150/419]	lr: 1.000e-03, eta: 0:29:38, time: 0.498, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0018, loss_rpn_bbox: 0.0065, loss_cls: 0.0434, acc: 98.2803, loss_bbox: 0.0695, loss: 0.1211
+2021-05-10 21:08:25,209 - mmdet - INFO - Epoch [16][200/419]	lr: 1.000e-03, eta: 0:29:14, time: 0.504, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0022, loss_rpn_bbox: 0.0070, loss_cls: 0.0461, acc: 98.2109, loss_bbox: 0.0748, loss: 0.1301
+2021-05-10 21:08:50,147 - mmdet - INFO - Epoch [16][250/419]	lr: 1.000e-03, eta: 0:28:50, time: 0.499, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0019, loss_rpn_bbox: 0.0061, loss_cls: 0.0413, acc: 98.3662, loss_bbox: 0.0668, loss: 0.1161
+2021-05-10 21:09:15,583 - mmdet - INFO - Epoch [16][300/419]	lr: 1.000e-03, eta: 0:28:26, time: 0.509, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0018, loss_rpn_bbox: 0.0060, loss_cls: 0.0448, acc: 98.2178, loss_bbox: 0.0712, loss: 0.1238
+2021-05-10 21:09:40,824 - mmdet - INFO - Epoch [16][350/419]	lr: 1.000e-03, eta: 0:28:02, time: 0.504, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0016, loss_rpn_bbox: 0.0070, loss_cls: 0.0476, acc: 98.1084, loss_bbox: 0.0795, loss: 0.1356
+2021-05-10 21:10:06,005 - mmdet - INFO - Epoch [16][400/419]	lr: 1.000e-03, eta: 0:27:37, time: 0.504, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0022, loss_rpn_bbox: 0.0062, loss_cls: 0.0465, acc: 98.2285, loss_bbox: 0.0711, loss: 0.1260
+2021-05-10 21:10:15,329 - mmdet - INFO - Saving checkpoint at 16 epochs
+2021-05-10 21:10:44,000 - mmdet - INFO - 
++---------+-----+------+--------+-------+
+| class   | gts | dets | recall | ap    |
++---------+-----+------+--------+-------+
+| cyclist | 386 | 664  | 0.940  | 0.889 |
+| person  | 332 | 821  | 0.964  | 0.897 |
++---------+-----+------+--------+-------+
+| mAP     |     |      |        | 0.893 |
++---------+-----+------+--------+-------+
+2021-05-10 21:10:44,003 - mmdet - INFO - Exp name: faster_rcnn_r50_fpn_crop.py
+2021-05-10 21:10:44,004 - mmdet - INFO - Epoch(val) [16][419]	mAP: 0.8931
+2021-05-10 21:11:11,899 - mmdet - INFO - Epoch [17][50/419]	lr: 1.000e-04, eta: 0:27:00, time: 0.555, data_time: 0.065, memory: 7069, loss_rpn_cls: 0.0020, loss_rpn_bbox: 0.0062, loss_cls: 0.0416, acc: 98.4473, loss_bbox: 0.0654, loss: 0.1152
+2021-05-10 21:11:37,219 - mmdet - INFO - Epoch [17][100/419]	lr: 1.000e-04, eta: 0:26:36, time: 0.507, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0019, loss_rpn_bbox: 0.0053, loss_cls: 0.0409, acc: 98.4365, loss_bbox: 0.0657, loss: 0.1138
+2021-05-10 21:12:02,363 - mmdet - INFO - Epoch [17][150/419]	lr: 1.000e-04, eta: 0:26:12, time: 0.503, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0015, loss_rpn_bbox: 0.0056, loss_cls: 0.0431, acc: 98.3154, loss_bbox: 0.0691, loss: 0.1193
+2021-05-10 21:12:27,173 - mmdet - INFO - Epoch [17][200/419]	lr: 1.000e-04, eta: 0:25:47, time: 0.496, data_time: 0.011, memory: 7069, loss_rpn_cls: 0.0016, loss_rpn_bbox: 0.0049, loss_cls: 0.0377, acc: 98.5400, loss_bbox: 0.0545, loss: 0.0987
+2021-05-10 21:12:52,578 - mmdet - INFO - Epoch [17][250/419]	lr: 1.000e-04, eta: 0:25:23, time: 0.508, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0018, loss_rpn_bbox: 0.0055, loss_cls: 0.0390, acc: 98.5400, loss_bbox: 0.0631, loss: 0.1095
+2021-05-10 21:13:17,661 - mmdet - INFO - Epoch [17][300/419]	lr: 1.000e-04, eta: 0:24:59, time: 0.502, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0014, loss_rpn_bbox: 0.0054, loss_cls: 0.0417, acc: 98.3643, loss_bbox: 0.0617, loss: 0.1102
+2021-05-10 21:13:42,958 - mmdet - INFO - Epoch [17][350/419]	lr: 1.000e-04, eta: 0:24:35, time: 0.506, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0016, loss_rpn_bbox: 0.0060, loss_cls: 0.0439, acc: 98.3164, loss_bbox: 0.0725, loss: 0.1241
+2021-05-10 21:14:08,040 - mmdet - INFO - Epoch [17][400/419]	lr: 1.000e-04, eta: 0:24:10, time: 0.502, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0014, loss_rpn_bbox: 0.0053, loss_cls: 0.0395, acc: 98.4941, loss_bbox: 0.0628, loss: 0.1090
+2021-05-10 21:14:43,576 - mmdet - INFO - 
++---------+-----+------+--------+-------+
+| class   | gts | dets | recall | ap    |
++---------+-----+------+--------+-------+
+| cyclist | 386 | 727  | 0.953  | 0.902 |
+| person  | 332 | 762  | 0.970  | 0.900 |
++---------+-----+------+--------+-------+
+| mAP     |     |      |        | 0.901 |
++---------+-----+------+--------+-------+
+2021-05-10 21:14:43,579 - mmdet - INFO - Exp name: faster_rcnn_r50_fpn_crop.py
+2021-05-10 21:14:43,579 - mmdet - INFO - Epoch(val) [17][419]	mAP: 0.9009
+2021-05-10 21:15:11,666 - mmdet - INFO - Epoch [18][50/419]	lr: 1.000e-04, eta: 0:23:34, time: 0.559, data_time: 0.065, memory: 7069, loss_rpn_cls: 0.0015, loss_rpn_bbox: 0.0053, loss_cls: 0.0404, acc: 98.4561, loss_bbox: 0.0628, loss: 0.1100
+2021-05-10 21:15:37,015 - mmdet - INFO - Epoch [18][100/419]	lr: 1.000e-04, eta: 0:23:10, time: 0.507, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0024, loss_rpn_bbox: 0.0061, loss_cls: 0.0439, acc: 98.3408, loss_bbox: 0.0681, loss: 0.1204
+2021-05-10 21:16:02,048 - mmdet - INFO - Epoch [18][150/419]	lr: 1.000e-04, eta: 0:22:45, time: 0.501, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0012, loss_rpn_bbox: 0.0057, loss_cls: 0.0390, acc: 98.5107, loss_bbox: 0.0651, loss: 0.1111
+2021-05-10 21:16:27,275 - mmdet - INFO - Epoch [18][200/419]	lr: 1.000e-04, eta: 0:22:21, time: 0.505, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0012, loss_rpn_bbox: 0.0050, loss_cls: 0.0390, acc: 98.5605, loss_bbox: 0.0636, loss: 0.1088
+2021-05-10 21:16:52,505 - mmdet - INFO - Epoch [18][250/419]	lr: 1.000e-04, eta: 0:21:57, time: 0.504, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0015, loss_rpn_bbox: 0.0061, loss_cls: 0.0409, acc: 98.4268, loss_bbox: 0.0660, loss: 0.1145
+2021-05-10 21:17:17,766 - mmdet - INFO - Epoch [18][300/419]	lr: 1.000e-04, eta: 0:21:33, time: 0.505, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0017, loss_rpn_bbox: 0.0054, loss_cls: 0.0407, acc: 98.3848, loss_bbox: 0.0638, loss: 0.1115
+2021-05-10 21:17:43,029 - mmdet - INFO - Epoch [18][350/419]	lr: 1.000e-04, eta: 0:21:08, time: 0.505, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0012, loss_rpn_bbox: 0.0050, loss_cls: 0.0399, acc: 98.4561, loss_bbox: 0.0601, loss: 0.1062
+2021-05-10 21:18:08,774 - mmdet - INFO - Epoch [18][400/419]	lr: 1.000e-04, eta: 0:20:44, time: 0.515, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0014, loss_rpn_bbox: 0.0050, loss_cls: 0.0386, acc: 98.5137, loss_bbox: 0.0600, loss: 0.1050
+2021-05-10 21:18:18,113 - mmdet - INFO - Saving checkpoint at 18 epochs
+2021-05-10 21:18:46,797 - mmdet - INFO - 
++---------+-----+------+--------+-------+
+| class   | gts | dets | recall | ap    |
++---------+-----+------+--------+-------+
+| cyclist | 386 | 765  | 0.961  | 0.907 |
+| person  | 332 | 759  | 0.967  | 0.901 |
++---------+-----+------+--------+-------+
+| mAP     |     |      |        | 0.904 |
++---------+-----+------+--------+-------+
+2021-05-10 21:18:46,800 - mmdet - INFO - Exp name: faster_rcnn_r50_fpn_crop.py
+2021-05-10 21:18:46,801 - mmdet - INFO - Epoch(val) [18][419]	mAP: 0.9038
+2021-05-10 21:19:14,626 - mmdet - INFO - Epoch [19][50/419]	lr: 1.000e-04, eta: 0:20:08, time: 0.554, data_time: 0.065, memory: 7069, loss_rpn_cls: 0.0017, loss_rpn_bbox: 0.0057, loss_cls: 0.0383, acc: 98.5449, loss_bbox: 0.0612, loss: 0.1068
+2021-05-10 21:19:39,796 - mmdet - INFO - Epoch [19][100/419]	lr: 1.000e-04, eta: 0:19:44, time: 0.503, data_time: 0.011, memory: 7069, loss_rpn_cls: 0.0016, loss_rpn_bbox: 0.0056, loss_cls: 0.0411, acc: 98.3896, loss_bbox: 0.0658, loss: 0.1141
+2021-05-10 21:20:05,023 - mmdet - INFO - Epoch [19][150/419]	lr: 1.000e-04, eta: 0:19:20, time: 0.505, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0015, loss_rpn_bbox: 0.0053, loss_cls: 0.0388, acc: 98.5312, loss_bbox: 0.0645, loss: 0.1101
+2021-05-10 21:20:30,233 - mmdet - INFO - Epoch [19][200/419]	lr: 1.000e-04, eta: 0:18:55, time: 0.504, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0016, loss_rpn_bbox: 0.0060, loss_cls: 0.0429, acc: 98.3291, loss_bbox: 0.0661, loss: 0.1165
+2021-05-10 21:20:55,641 - mmdet - INFO - Epoch [19][250/419]	lr: 1.000e-04, eta: 0:18:31, time: 0.509, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0013, loss_rpn_bbox: 0.0051, loss_cls: 0.0380, acc: 98.5781, loss_bbox: 0.0591, loss: 0.1034
+2021-05-10 21:21:21,094 - mmdet - INFO - Epoch [19][300/419]	lr: 1.000e-04, eta: 0:18:07, time: 0.509, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0016, loss_rpn_bbox: 0.0054, loss_cls: 0.0417, acc: 98.3486, loss_bbox: 0.0665, loss: 0.1153
+2021-05-10 21:21:47,037 - mmdet - INFO - Epoch [19][350/419]	lr: 1.000e-04, eta: 0:17:42, time: 0.518, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0015, loss_rpn_bbox: 0.0053, loss_cls: 0.0392, acc: 98.4932, loss_bbox: 0.0608, loss: 0.1069
+2021-05-10 21:22:12,171 - mmdet - INFO - Epoch [19][400/419]	lr: 1.000e-04, eta: 0:17:18, time: 0.503, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0015, loss_rpn_bbox: 0.0053, loss_cls: 0.0364, acc: 98.6318, loss_bbox: 0.0598, loss: 0.1030
+2021-05-10 21:22:47,889 - mmdet - INFO - 
++---------+-----+------+--------+-------+
+| class   | gts | dets | recall | ap    |
++---------+-----+------+--------+-------+
+| cyclist | 386 | 703  | 0.951  | 0.900 |
+| person  | 332 | 773  | 0.970  | 0.900 |
++---------+-----+------+--------+-------+
+| mAP     |     |      |        | 0.900 |
++---------+-----+------+--------+-------+
+2021-05-10 21:22:47,892 - mmdet - INFO - Exp name: faster_rcnn_r50_fpn_crop.py
+2021-05-10 21:22:47,892 - mmdet - INFO - Epoch(val) [19][419]	mAP: 0.9000
+2021-05-10 21:23:16,150 - mmdet - INFO - Epoch [20][50/419]	lr: 1.000e-04, eta: 0:16:43, time: 0.563, data_time: 0.063, memory: 7069, loss_rpn_cls: 0.0013, loss_rpn_bbox: 0.0061, loss_cls: 0.0392, acc: 98.5371, loss_bbox: 0.0636, loss: 0.1103
+2021-05-10 21:23:41,153 - mmdet - INFO - Epoch [20][100/419]	lr: 1.000e-04, eta: 0:16:18, time: 0.500, data_time: 0.011, memory: 7069, loss_rpn_cls: 0.0014, loss_rpn_bbox: 0.0052, loss_cls: 0.0382, acc: 98.5234, loss_bbox: 0.0591, loss: 0.1039
+2021-05-10 21:24:06,137 - mmdet - INFO - Epoch [20][150/419]	lr: 1.000e-04, eta: 0:15:54, time: 0.500, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0019, loss_rpn_bbox: 0.0052, loss_cls: 0.0396, acc: 98.4170, loss_bbox: 0.0649, loss: 0.1115
+2021-05-10 21:24:31,560 - mmdet - INFO - Epoch [20][200/419]	lr: 1.000e-04, eta: 0:15:30, time: 0.508, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0014, loss_rpn_bbox: 0.0055, loss_cls: 0.0393, acc: 98.5244, loss_bbox: 0.0605, loss: 0.1067
+2021-05-10 21:24:57,153 - mmdet - INFO - Epoch [20][250/419]	lr: 1.000e-04, eta: 0:15:05, time: 0.512, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0017, loss_rpn_bbox: 0.0051, loss_cls: 0.0389, acc: 98.5479, loss_bbox: 0.0566, loss: 0.1023
+2021-05-10 21:25:22,370 - mmdet - INFO - Epoch [20][300/419]	lr: 1.000e-04, eta: 0:14:41, time: 0.505, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0012, loss_rpn_bbox: 0.0052, loss_cls: 0.0387, acc: 98.5273, loss_bbox: 0.0615, loss: 0.1066
+2021-05-10 21:25:47,804 - mmdet - INFO - Epoch [20][350/419]	lr: 1.000e-04, eta: 0:14:16, time: 0.509, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0016, loss_rpn_bbox: 0.0054, loss_cls: 0.0379, acc: 98.5566, loss_bbox: 0.0645, loss: 0.1095
+2021-05-10 21:26:13,094 - mmdet - INFO - Epoch [20][400/419]	lr: 1.000e-04, eta: 0:13:52, time: 0.505, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0013, loss_rpn_bbox: 0.0055, loss_cls: 0.0404, acc: 98.4502, loss_bbox: 0.0654, loss: 0.1126
+2021-05-10 21:26:22,943 - mmdet - INFO - Saving checkpoint at 20 epochs
+2021-05-10 21:26:51,721 - mmdet - INFO - 
++---------+-----+------+--------+-------+
+| class   | gts | dets | recall | ap    |
++---------+-----+------+--------+-------+
+| cyclist | 386 | 678  | 0.946  | 0.897 |
+| person  | 332 | 738  | 0.970  | 0.896 |
++---------+-----+------+--------+-------+
+| mAP     |     |      |        | 0.897 |
++---------+-----+------+--------+-------+
+2021-05-10 21:26:51,724 - mmdet - INFO - Exp name: faster_rcnn_r50_fpn_crop.py
+2021-05-10 21:26:51,724 - mmdet - INFO - Epoch(val) [20][419]	mAP: 0.8967
+2021-05-10 21:27:19,834 - mmdet - INFO - Epoch [21][50/419]	lr: 1.000e-05, eta: 0:13:17, time: 0.560, data_time: 0.065, memory: 7069, loss_rpn_cls: 0.0015, loss_rpn_bbox: 0.0054, loss_cls: 0.0400, acc: 98.4561, loss_bbox: 0.0662, loss: 0.1131
+2021-05-10 21:27:44,943 - mmdet - INFO - Epoch [21][100/419]	lr: 1.000e-05, eta: 0:12:53, time: 0.502, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0015, loss_rpn_bbox: 0.0054, loss_cls: 0.0389, acc: 98.4854, loss_bbox: 0.0633, loss: 0.1091
+2021-05-10 21:28:10,320 - mmdet - INFO - Epoch [21][150/419]	lr: 1.000e-05, eta: 0:12:28, time: 0.508, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0015, loss_rpn_bbox: 0.0048, loss_cls: 0.0350, acc: 98.6729, loss_bbox: 0.0538, loss: 0.0950
+2021-05-10 21:28:35,561 - mmdet - INFO - Epoch [21][200/419]	lr: 1.000e-05, eta: 0:12:04, time: 0.505, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0012, loss_rpn_bbox: 0.0050, loss_cls: 0.0396, acc: 98.4941, loss_bbox: 0.0629, loss: 0.1086
+2021-05-10 21:29:00,817 - mmdet - INFO - Epoch [21][250/419]	lr: 1.000e-05, eta: 0:11:39, time: 0.505, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0018, loss_rpn_bbox: 0.0057, loss_cls: 0.0378, acc: 98.5430, loss_bbox: 0.0621, loss: 0.1074
+2021-05-10 21:29:26,320 - mmdet - INFO - Epoch [21][300/419]	lr: 1.000e-05, eta: 0:11:15, time: 0.510, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0014, loss_rpn_bbox: 0.0057, loss_cls: 0.0390, acc: 98.4951, loss_bbox: 0.0645, loss: 0.1106
+2021-05-10 21:29:51,334 - mmdet - INFO - Epoch [21][350/419]	lr: 1.000e-05, eta: 0:10:51, time: 0.501, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0014, loss_rpn_bbox: 0.0050, loss_cls: 0.0374, acc: 98.6055, loss_bbox: 0.0592, loss: 0.1031
+2021-05-10 21:30:17,100 - mmdet - INFO - Epoch [21][400/419]	lr: 1.000e-05, eta: 0:10:26, time: 0.515, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0015, loss_rpn_bbox: 0.0058, loss_cls: 0.0416, acc: 98.3701, loss_bbox: 0.0648, loss: 0.1137
+2021-05-10 21:30:52,657 - mmdet - INFO - 
++---------+-----+------+--------+-------+
+| class   | gts | dets | recall | ap    |
++---------+-----+------+--------+-------+
+| cyclist | 386 | 671  | 0.943  | 0.894 |
+| person  | 332 | 732  | 0.970  | 0.900 |
++---------+-----+------+--------+-------+
+| mAP     |     |      |        | 0.897 |
++---------+-----+------+--------+-------+
+2021-05-10 21:30:52,660 - mmdet - INFO - Exp name: faster_rcnn_r50_fpn_crop.py
+2021-05-10 21:30:52,660 - mmdet - INFO - Epoch(val) [21][419]	mAP: 0.8974
+2021-05-10 21:31:20,363 - mmdet - INFO - Epoch [22][50/419]	lr: 1.000e-05, eta: 0:09:51, time: 0.552, data_time: 0.064, memory: 7069, loss_rpn_cls: 0.0012, loss_rpn_bbox: 0.0044, loss_cls: 0.0332, acc: 98.7412, loss_bbox: 0.0545, loss: 0.0934
+2021-05-10 21:31:45,774 - mmdet - INFO - Epoch [22][100/419]	lr: 1.000e-05, eta: 0:09:27, time: 0.508, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0019, loss_rpn_bbox: 0.0063, loss_cls: 0.0398, acc: 98.4287, loss_bbox: 0.0644, loss: 0.1124
+2021-05-10 21:32:10,903 - mmdet - INFO - Epoch [22][150/419]	lr: 1.000e-05, eta: 0:09:03, time: 0.503, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0013, loss_rpn_bbox: 0.0054, loss_cls: 0.0382, acc: 98.5186, loss_bbox: 0.0595, loss: 0.1043
+2021-05-10 21:32:36,010 - mmdet - INFO - Epoch [22][200/419]	lr: 1.000e-05, eta: 0:08:38, time: 0.503, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0016, loss_rpn_bbox: 0.0055, loss_cls: 0.0393, acc: 98.5146, loss_bbox: 0.0639, loss: 0.1104
+2021-05-10 21:33:01,143 - mmdet - INFO - Epoch [22][250/419]	lr: 1.000e-05, eta: 0:08:14, time: 0.503, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0011, loss_rpn_bbox: 0.0046, loss_cls: 0.0389, acc: 98.4727, loss_bbox: 0.0634, loss: 0.1079
+2021-05-10 21:33:26,776 - mmdet - INFO - Epoch [22][300/419]	lr: 1.000e-05, eta: 0:07:49, time: 0.512, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0017, loss_rpn_bbox: 0.0058, loss_cls: 0.0416, acc: 98.4062, loss_bbox: 0.0687, loss: 0.1178
+2021-05-10 21:33:51,998 - mmdet - INFO - Epoch [22][350/419]	lr: 1.000e-05, eta: 0:07:25, time: 0.504, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0017, loss_rpn_bbox: 0.0055, loss_cls: 0.0375, acc: 98.5732, loss_bbox: 0.0598, loss: 0.1044
+2021-05-10 21:34:17,470 - mmdet - INFO - Epoch [22][400/419]	lr: 1.000e-05, eta: 0:07:00, time: 0.509, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0013, loss_rpn_bbox: 0.0053, loss_cls: 0.0380, acc: 98.6045, loss_bbox: 0.0571, loss: 0.1018
+2021-05-10 21:34:27,108 - mmdet - INFO - Saving checkpoint at 22 epochs
+2021-05-10 21:34:55,926 - mmdet - INFO - 
++---------+-----+------+--------+-------+
+| class   | gts | dets | recall | ap    |
++---------+-----+------+--------+-------+
+| cyclist | 386 | 675  | 0.943  | 0.895 |
+| person  | 332 | 735  | 0.970  | 0.902 |
++---------+-----+------+--------+-------+
+| mAP     |     |      |        | 0.898 |
++---------+-----+------+--------+-------+
+2021-05-10 21:34:55,929 - mmdet - INFO - Exp name: faster_rcnn_r50_fpn_crop.py
+2021-05-10 21:34:55,929 - mmdet - INFO - Epoch(val) [22][419]	mAP: 0.8983
+2021-05-10 21:35:23,437 - mmdet - INFO - Epoch [23][50/419]	lr: 1.000e-05, eta: 0:06:26, time: 0.547, data_time: 0.062, memory: 7069, loss_rpn_cls: 0.0021, loss_rpn_bbox: 0.0057, loss_cls: 0.0383, acc: 98.4766, loss_bbox: 0.0651, loss: 0.1111
+2021-05-10 21:35:48,532 - mmdet - INFO - Epoch [23][100/419]	lr: 1.000e-05, eta: 0:06:01, time: 0.502, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0016, loss_rpn_bbox: 0.0057, loss_cls: 0.0375, acc: 98.5752, loss_bbox: 0.0604, loss: 0.1053
+2021-05-10 21:36:13,775 - mmdet - INFO - Epoch [23][150/419]	lr: 1.000e-05, eta: 0:05:37, time: 0.505, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0014, loss_rpn_bbox: 0.0057, loss_cls: 0.0401, acc: 98.4658, loss_bbox: 0.0644, loss: 0.1116
+2021-05-10 21:36:39,168 - mmdet - INFO - Epoch [23][200/419]	lr: 1.000e-05, eta: 0:05:12, time: 0.508, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0014, loss_rpn_bbox: 0.0051, loss_cls: 0.0378, acc: 98.5723, loss_bbox: 0.0613, loss: 0.1056
+2021-05-10 21:37:04,478 - mmdet - INFO - Epoch [23][250/419]	lr: 1.000e-05, eta: 0:04:48, time: 0.506, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0019, loss_rpn_bbox: 0.0060, loss_cls: 0.0390, acc: 98.4863, loss_bbox: 0.0595, loss: 0.1064
+2021-05-10 21:37:29,557 - mmdet - INFO - Epoch [23][300/419]	lr: 1.000e-05, eta: 0:04:23, time: 0.502, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0013, loss_rpn_bbox: 0.0047, loss_cls: 0.0383, acc: 98.5693, loss_bbox: 0.0585, loss: 0.1028
+2021-05-10 21:37:54,800 - mmdet - INFO - Epoch [23][350/419]	lr: 1.000e-05, eta: 0:03:59, time: 0.505, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0014, loss_rpn_bbox: 0.0051, loss_cls: 0.0376, acc: 98.5674, loss_bbox: 0.0617, loss: 0.1058
+2021-05-10 21:38:20,143 - mmdet - INFO - Epoch [23][400/419]	lr: 1.000e-05, eta: 0:03:34, time: 0.506, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0017, loss_rpn_bbox: 0.0050, loss_cls: 0.0398, acc: 98.4805, loss_bbox: 0.0626, loss: 0.1091
+2021-05-10 21:38:56,046 - mmdet - INFO - 
++---------+-----+------+--------+-------+
+| class   | gts | dets | recall | ap    |
++---------+-----+------+--------+-------+
+| cyclist | 386 | 668  | 0.943  | 0.895 |
+| person  | 332 | 726  | 0.970  | 0.901 |
++---------+-----+------+--------+-------+
+| mAP     |     |      |        | 0.898 |
++---------+-----+------+--------+-------+
+2021-05-10 21:38:56,049 - mmdet - INFO - Exp name: faster_rcnn_r50_fpn_crop.py
+2021-05-10 21:38:56,050 - mmdet - INFO - Epoch(val) [23][419]	mAP: 0.8983
+2021-05-10 21:39:24,089 - mmdet - INFO - Epoch [24][50/419]	lr: 1.000e-05, eta: 0:03:00, time: 0.558, data_time: 0.065, memory: 7069, loss_rpn_cls: 0.0013, loss_rpn_bbox: 0.0050, loss_cls: 0.0381, acc: 98.5332, loss_bbox: 0.0612, loss: 0.1057
+2021-05-10 21:39:49,395 - mmdet - INFO - Epoch [24][100/419]	lr: 1.000e-05, eta: 0:02:36, time: 0.506, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0018, loss_rpn_bbox: 0.0056, loss_cls: 0.0411, acc: 98.4160, loss_bbox: 0.0667, loss: 0.1152
+2021-05-10 21:40:14,629 - mmdet - INFO - Epoch [24][150/419]	lr: 1.000e-05, eta: 0:02:11, time: 0.505, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0015, loss_rpn_bbox: 0.0051, loss_cls: 0.0372, acc: 98.6367, loss_bbox: 0.0579, loss: 0.1017
+2021-05-10 21:40:39,328 - mmdet - INFO - Epoch [24][200/419]	lr: 1.000e-05, eta: 0:01:47, time: 0.494, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0017, loss_rpn_bbox: 0.0049, loss_cls: 0.0374, acc: 98.5869, loss_bbox: 0.0595, loss: 0.1034
+2021-05-10 21:41:04,624 - mmdet - INFO - Epoch [24][250/419]	lr: 1.000e-05, eta: 0:01:22, time: 0.506, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0017, loss_rpn_bbox: 0.0052, loss_cls: 0.0376, acc: 98.5303, loss_bbox: 0.0607, loss: 0.1053
+2021-05-10 21:41:30,065 - mmdet - INFO - Epoch [24][300/419]	lr: 1.000e-05, eta: 0:00:58, time: 0.509, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0011, loss_rpn_bbox: 0.0059, loss_cls: 0.0391, acc: 98.5059, loss_bbox: 0.0613, loss: 0.1074
+2021-05-10 21:41:55,164 - mmdet - INFO - Epoch [24][350/419]	lr: 1.000e-05, eta: 0:00:33, time: 0.502, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0016, loss_rpn_bbox: 0.0049, loss_cls: 0.0365, acc: 98.6318, loss_bbox: 0.0580, loss: 0.1009
+2021-05-10 21:42:20,065 - mmdet - INFO - Epoch [24][400/419]	lr: 1.000e-05, eta: 0:00:09, time: 0.498, data_time: 0.012, memory: 7069, loss_rpn_cls: 0.0018, loss_rpn_bbox: 0.0062, loss_cls: 0.0395, acc: 98.4961, loss_bbox: 0.0650, loss: 0.1124
+2021-05-10 21:42:29,572 - mmdet - INFO - Saving checkpoint at 24 epochs
+2021-05-10 21:42:58,438 - mmdet - INFO - 
++---------+-----+------+--------+-------+
+| class   | gts | dets | recall | ap    |
++---------+-----+------+--------+-------+
+| cyclist | 386 | 681  | 0.948  | 0.899 |
+| person  | 332 | 742  | 0.970  | 0.902 |
++---------+-----+------+--------+-------+
+| mAP     |     |      |        | 0.900 |
++---------+-----+------+--------+-------+
+2021-05-10 21:42:58,441 - mmdet - INFO - Exp name: faster_rcnn_r50_fpn_crop.py
+2021-05-10 21:42:58,442 - mmdet - INFO - Epoch(val) [24][419]	mAP: 0.9001

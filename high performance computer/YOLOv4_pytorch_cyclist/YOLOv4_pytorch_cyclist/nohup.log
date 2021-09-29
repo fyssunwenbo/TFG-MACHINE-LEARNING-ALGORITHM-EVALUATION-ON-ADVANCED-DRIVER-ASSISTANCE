@@ -1,0 +1,20 @@
+nohup: 忽略输入
+Using CUDA device0 _CudaDeviceProperties(name='GeForce RTX 2080 Ti', total_memory=11018MB)
+Using multi scales training
+load darknet weights :  weight/yolov4.weights
+Traceback (most recent call last):
+  File "train.py", line 364, in <module>
+    fp_16=opt.fp_16,
+  File "train.py", line 70, in __init__
+    self.yolov4 = Build_Model(weight_path=weight_path, resume=resume, showatt=self.showatt).to(
+  File "/home/qingyuan/data/YOLOv4-pytorch-master/model/build_model.py", line 34, in __init__
+    showatt=showatt
+  File "/home/qingyuan/data/YOLOv4-pytorch-master/model/YOLOv4.py", line 254, in __init__
+    weight_path=weight_path, resume=resume
+  File "/home/qingyuan/data/YOLOv4-pytorch-master/model/backbones/CSPDarknet53.py", line 305, in _BuildCSPDarknet53
+    model = CSPDarknet53(weight_path=weight_path, resume=resume)
+  File "/home/qingyuan/data/YOLOv4-pytorch-master/model/backbones/CSPDarknet53.py", line 206, in __init__
+    self.load_CSPdarknet_weights(weight_path)
+  File "/home/qingyuan/data/YOLOv4-pytorch-master/model/backbones/CSPDarknet53.py", line 242, in load_CSPdarknet_weights
+    with open(weight_file, "rb") as f:
+FileNotFoundError: [Errno 2] No such file or directory: 'weight/yolov4.weights'

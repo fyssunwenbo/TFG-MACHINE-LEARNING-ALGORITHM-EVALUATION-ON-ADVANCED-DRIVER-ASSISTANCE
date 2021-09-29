@@ -1,0 +1,24 @@
+--2021-09-19 16:01:13--  https://nvidia.box.com/shared/static/p57jwntv436lfrd78inwl7iml6p13fzh.whl
+Resolving nvidia.box.com (nvidia.box.com)... 185.235.236.197
+Connecting to nvidia.box.com (nvidia.box.com)|185.235.236.197|:443... connected.
+HTTP request sent, awaiting response... 301 Moved Permanently
+Location: /public/static/p57jwntv436lfrd78inwl7iml6p13fzh.whl [following]
+--2021-09-19 16:01:15--  https://nvidia.box.com/public/static/p57jwntv436lfrd78inwl7iml6p13fzh.whl
+Reusing existing connection to nvidia.box.com:443.
+HTTP request sent, awaiting response... 301 Moved Permanently
+Location: https://nvidia.app.box.com/public/static/p57jwntv436lfrd78inwl7iml6p13fzh.whl [following]
+--2021-09-19 16:01:16--  https://nvidia.app.box.com/public/static/p57jwntv436lfrd78inwl7iml6p13fzh.whl
+Resolving nvidia.app.box.com (nvidia.app.box.com)... 243.185.187.39
+Connecting to nvidia.app.box.com (nvidia.app.box.com)|243.185.187.39|:443... failed: Connection timed out.
+Retrying.
+
+--2021-09-19 16:03:28--  (try: 2)  https://nvidia.app.box.com/public/static/p57jwntv436lfrd78inwl7iml6p13fzh.whl
+Connecting to nvidia.app.box.com (nvidia.app.box.com)|243.185.187.39|:443... failed: Connection timed out.
+Retrying.
+
+--2021-09-19 16:05:40--  (try: 3)  https://nvidia.app.box.com/public/static/p57jwntv436lfrd78inwl7iml6p13fzh.whl
+Connecting to nvidia.app.box.com (nvidia.app.box.com)|243.185.187.39|:443... failed: Connection timed out.
+Retrying.
+
+--2021-09-19 16:07:54--  (try: 4)  https://nvidia.app.box.com/public/static/p57jwntv436lfrd78inwl7iml6p13fzh.whl
+Connecting to nvidia.app.box.com (nvidia.app.box.com)|243.185.187.39|:443... failed: Network is unreachable.
